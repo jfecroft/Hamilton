@@ -50,26 +50,26 @@ def get_num(var):
     return int(var.name.split('_')[2])
 
 
-def T(coords, system_vars):
+def T(coords, system_def, system_vars):
     """
     generic kinetic energy term
     """
     ke = 0
-    for particle in range(num):
-        for dimension in range(dim):
+    for particle in range(system_def['num']):
+        for dimension in system_def['dim']:
             ke += coords['p_{}_{}'.format(dimension,particle)]**2/(2*system_vars['mass_{}'.format(particle)])
     return ke
 
-def V(coords, system_vars):
+def V(coords, system_def, system_vars):
     """
     pairwise potential energy term
     """
     pot = 0
-    for pair in combinations(range(num), 2):
+    for pair in combinations(range(system_def['num']), 2):
         # loop over pairs of particles
         c6 = system_vars['C6_{}_{}'.format(pair[0], pair[1])]
         c12 = system_vars['C12_{}_{}'.format(pair[0], pair[1])]
-        r2 = sum([(coords['q_{}_{}'.format(i, pair[0])]-coords['p_{}_{}'.format(i, pair[1])])**2 for i in range(dim)])
+        r2 = sum([(coords['q_{}_{}'.format(i, pair[0])]-coords['p_{}_{}'.format(i, pair[1])])**2 for i in system_def['dim']])
         pot += lj(r2,c12,c6)
     return pot
 
@@ -84,25 +84,36 @@ def load_yaml(filen):
         return_dict = load(open_file)
     return return_dict
 
+def create_coords(dim, num):
+    coords = []
+    for i, j, k in product(dim, range(num), ('p', 'q')):
+        coords.append(sp.var('{}_{}_{}'.format(k,i,j)))
+    return tuple(coords)
+
 # define canonical ps and qs
-ps = sp.var('p_:{}_:{}'.format(dim, num))
-qs = sp.var('q_:{}_:{}'.format(dim, num))
 t = sp.var('t')
-coords = {i.name:i for i in ps+qs}
-system_vars = load_yaml('input')
+data = load_yaml('input')
+system_vars = data['system_vars']
+system_def = data['system_def']
+coords = create_coords(system_def['dim'], system_def['num'])
+ps = [i for i in coords if i.name[0] == 'p']
+qs = [i for i in coords if i.name[0] == 'q']
+coord_dict = {i.name:i for i in coords}
 #define system varibales in yaml file
 # mass = sp.var('m_:{}'.format(num))
 # C12 = {k.name:k for k in [sp.var('C12_{}_{}'.format(i,j)) for i,j in combinations(range(num), 2)]}
 # C6 = {k.name:k for k in [sp.var('C6_{}_{}'.format(i,j)) for i,j in combinations(range(num), 2)]}
 # system_vars = {'mass': mass, 'dim': dim, 'num': num, 'C12':C12, 'C6':C6}
 print system_vars
-KE = T(coords, system_vars)
-POT = V(coords, system_vars)
+KE = T(coord_dict,system_def, system_vars)
+POT = V(coord_dict, system_def, system_vars)
 H = KE+POT
 HJacp = sp.Matrix([H]).jacobian(ps)
 HJacq = -sp.Matrix([H]).jacobian(qs)
 RHS = sp.Matrix(sp.BlockMatrix([[HJacp, HJacq]]))
-func = reduce_output(sp.lambdify((t,(ps+qs)), RHS.subs(system_vars)), 0)
-
 import pdb
 pdb.set_trace()
+func = reduce_output(sp.lambdify((t,(ps+qs)), RHS), 0)
+
+solve_ivp(func, (0,100), range(12))
+
