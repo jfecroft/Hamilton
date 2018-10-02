@@ -4,6 +4,7 @@ from scipy.misc import comb
 from scipy.integrate import solve_ivp
 from yaml import load
 from generic import reduce_output
+import numpy as np
 
 dim = 2 # spatial dimension
 num = 3 # particle number
@@ -36,7 +37,7 @@ def V(coords, system_def, system_vars):
         # loop over pairs of particles
         c6 = system_vars['C6_{}_{}'.format(pair[0], pair[1])]
         c12 = system_vars['C12_{}_{}'.format(pair[0], pair[1])]
-        r2 = sum([(coords['q_{}_{}'.format(i, pair[0])]-coords['p_{}_{}'.format(i, pair[1])])**2 for i in system_def['dim']])
+        r2 = sum([(coords['q_{}_{}'.format(i, pair[0])]-coords['q_{}_{}'.format(i, pair[1])])**2 for i in system_def['dim']])
         pot += lj(r2,c12,c6)
     return pot
 
@@ -56,6 +57,7 @@ class Hamilton:
         self.dim = self.system_def['dim']
         self.num = self.system_def['num']
         self.system_vars = self.data['system_vars']
+        self.initial_condition = self.data['initial_condition']
         self.coords = self.create_coords(self.dim, self.num)
         self.coord_dict = {i.name:i for i in self.coords}
         self.T = T(self.coord_dict, self.system_def, self.system_vars)
@@ -70,14 +72,30 @@ class Hamilton:
             coords.append(sp.var('{}_{}_{}'.format(k,i,j)))
         return tuple(coords)
 
+    def create_initial_condition(self):
+        """
+        create initial condition vector from input file and ps and qs
+        consistant with the RHS definition
+        """
+        return [self.initial_condition[i.name] for i in self.ps+self.qs]
+
     def prop(self, time):
         HJacp = sp.Matrix([self.H]).jacobian(self.ps)
         HJacq = -sp.Matrix([self.H]).jacobian(self.qs)
-        RHS = sp.Matrix(sp.BlockMatrix([[HJacp, HJacq]]))
+        RHS = sp.Matrix(sp.BlockMatrix([[HJacq, HJacp]]))
         t = sp.var('t')
         func = reduce_output(sp.lambdify((t,(self.ps+self.qs)), RHS), 0)
         # func is defind as ps+qs therefore we must pass qs + ps - see hamilton equations
-        print solve_ivp(func, (0,100), range(12))
+        initial_condition = self.create_initial_condition()
+        inital_energy = self.H.subs(self.initial_condition)
+        sol = solve_ivp(func, (0,1000), initial_condition, rtol=1e-9, atol=1e-6)
+        final = sol['y'][:,-1]
+        final_energy = self.H.subs(dict(zip((self.ps+self.qs),final)))
+        energy_conservation = (inital_energy-final_energy)/inital_energy
+        print 'change in total energy {}%'.format(energy_conservation*100)
+        print (self.ps+self.qs)
+        traj = np.vstack((sol['t'],sol['y']))
+        np.savetxt('traj.dat', traj.T)
         import pdb
         pdb.set_trace()
 
@@ -86,21 +104,17 @@ class Hamilton:
 
 Ham = Hamilton(T, V, 'input')
 Ham.prop(10)
-# define canonical ps and qs
-data = load_yaml('input')
-system_vars = data['system_vars']
-system_def = data['system_def']
-coords = create_coords(system_def['dim'], system_def['num'])
-ps = [i for i in coords if i.name[0] == 'p']
-qs = [i for i in coords if i.name[0] == 'q']
-coord_dict = {i.name:i for i in coords}
-#define system varibales in yaml file
-# mass = sp.var('m_:{}'.format(num))
-# C12 = {k.name:k for k in [sp.var('C12_{}_{}'.format(i,j)) for i,j in combinations(range(num), 2)]}
-# C6 = {k.name:k for k in [sp.var('C6_{}_{}'.format(i,j)) for i,j in combinations(range(num), 2)]}
-# system_vars = {'mass': mass, 'dim': dim, 'num': num, 'C12':C12, 'C6':C6}
-print system_vars
-KE = T(coord_dict,system_def, system_vars)
-POT = V(coord_dict, system_def, system_vars)
-H = KE+POT
+# # define canonical ps and qs
+# data = load_yaml('input')
+# system_vars = data['system_vars']
+# system_def = data['system_def']
+# coords = create_coords(system_def['dim'], system_def['num'])
+# ps = [i for i in coords if i.name[0] == 'p']
+# qs = [i for i in coords if i.name[0] == 'q']
+# coord_dict = {i.name:i for i in coords}
+# #define system varibales in yaml file
+# # mass = sp.var('m_:{}'.format(num))
+# # C12 = {k.name:k for k in [sp.var('C12_{}_{}'.format(i,j)) for i,j in combinations(range(num), 2)]}
+# # C6 = {k.name:k for k in [sp.var('C6_{}_{}'.format(i,j)) for i,j in combinations(range(num), 2)]}
+# # system_vars = {'mass': mass, 'dim': dim, 'num': num, 'C12':C12, 'C6':C6}
 
