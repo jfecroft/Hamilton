@@ -1,0 +1,29 @@
+system_def:
+    dim:
+       ['x', 'y'] 
+    num:
+        3
+system_vars:
+    C12_0_1:
+        1
+    C12_0_2:
+        1
+    C12_1_2:
+        1
+    C6_0_1:
+        1
+    C6_0_2:
+        1
+    C6_1_2:
+        1
+    mass_0:
+        1
+    mass_1:
+        1
+    mass_2:
+        1
+initial_condition:
+    p_0_0:
+        1
+    p_0_0:
+        1
