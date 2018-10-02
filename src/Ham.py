@@ -79,7 +79,7 @@ class Hamilton:
         """
         return [self.initial_condition[i.name] for i in self.ps+self.qs]
 
-    def prop(self, time):
+    def prop(self, time, rtol:1.0e-6):
         HJacp = sp.Matrix([self.H]).jacobian(self.ps)
         HJacq = -sp.Matrix([self.H]).jacobian(self.qs)
         RHS = sp.Matrix(sp.BlockMatrix([[HJacq, HJacp]]))
@@ -88,7 +88,7 @@ class Hamilton:
         # func is defind as ps+qs therefore we must pass qs + ps - see hamilton equations
         initial_condition = self.create_initial_condition()
         inital_energy = self.H.subs(self.initial_condition)
-        sol = solve_ivp(func, (0,1000), initial_condition, rtol=1e-9, atol=1e-6)
+        sol = solve_ivp(func, (0,time), initial_condition, rtol=rtol)
         final = sol['y'][:,-1]
         final_energy = self.H.subs(dict(zip((self.ps+self.qs),final)))
         energy_conservation = (inital_energy-final_energy)/inital_energy
@@ -103,7 +103,7 @@ class Hamilton:
 
 
 Ham = Hamilton(T, V, 'input')
-Ham.prop(10)
+Ham.prop(10, 1.0e-9)
 # # define canonical ps and qs
 # data = load_yaml('input')
 # system_vars = data['system_vars']
