@@ -42,7 +42,11 @@ def T(coords, mass, **system_vars):
     """
     generic kinetic energy term
     """
-    return sum([i**2/(2*mass[get_num(i)]) for i in coords.itervalues() if is_p(i)])
+    ke = 0
+    for particle in range(num):
+        for dimension in range(dim):
+            ke += coords['p_{}_{}'.format(dimension,particle)]**2/(2*mass[particle])
+    return ke
 
 def V(coords, num, dim, C12, C6, **system_vars):
     """
@@ -53,9 +57,12 @@ def V(coords, num, dim, C12, C6, **system_vars):
         # loop over pairs of particles
         c6 = C6['C6_{}_{}'.format(pair[0], pair[1])]
         c12 = C12['C12_{}_{}'.format(pair[0], pair[1])]
-        r2 = sum([(coords['p_{}_{}'.format(i, pair[0])]-coords['p_{}_{}'.format(i, pair[1])])**2 for i in range(dim)])
+        r2 = sum([(coords['q_{}_{}'.format(i, pair[0])]-coords['p_{}_{}'.format(i, pair[1])])**2 for i in range(dim)])
         pot += lj(r2,c12,c6)
     return pot
+
+def get_coords(coords):
+    return [i for i in coords.itervalues()]
 
 # define canonical ps and qs
 ps = sp.var('p_:{}_:{}'.format(dim, num))
@@ -69,6 +76,9 @@ system_vars = {'mass': mass, 'dim': dim, 'num': num, 'C12':C12, 'C6':C6}
 KE = T(coords, **system_vars)
 POT = V(coords, **system_vars)
 H = KE+POT
+HJacp = sp.Matrix([H]).jacobian(ps)
+HJacq = -sp.Matrix([H]).jacobian(qs)
+RHS = sp.Matrix(sp.BlockMatrix([[HJacp, HJacq]]))
 import pdb
 pdb.set_trace()
 
