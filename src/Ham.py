@@ -63,8 +63,6 @@ class Hamilton:
         self.H = self.T + self.V
         self.ps = [i for i in self.coords if i.name[0] == 'p']
         self.qs = [i for i in self.coords if i.name[0] == 'q']
-        import pdb
-        pdb.set_trace()
 
     def create_coords(self, dim, num):
         coords = []
@@ -77,11 +75,11 @@ class Hamilton:
         HJacq = -sp.Matrix([self.H]).jacobian(self.qs)
         RHS = sp.Matrix(sp.BlockMatrix([[HJacp, HJacq]]))
         t = sp.var('t')
-        import pdb
-        pdb.set_trace()
         func = reduce_output(sp.lambdify((t,(self.ps+self.qs)), RHS), 0)
         # func is defind as ps+qs therefore we must pass qs + ps - see hamilton equations
-        solve_ivp(func, (0,100), range(12))
+        print solve_ivp(func, (0,100), range(12))
+        import pdb
+        pdb.set_trace()
 
 
 
