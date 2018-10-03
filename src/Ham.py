@@ -58,33 +58,35 @@ class Hamilton:
         self.num = self.system_def['num']
         self.system_vars = self.data['system_vars']
         self.initial_condition = self.data['initial_condition']
-        self.coords = self.create_coords(self.dim, self.num)
+        self.ps, self.qs = self.create_coords(self.dim, self.num)
+        self.coords = tuple(self.ps+self.qs)
         self.coord_dict = {i.name:i for i in self.coords}
         self.T = T(self.coord_dict, self.system_def, self.system_vars)
         self.V = V(self.coord_dict, self.system_def, self.system_vars)
         self.H = self.T + self.V
-        self.ps = [i for i in self.coords if i.name[0] == 'p']
-        self.qs = [i for i in self.coords if i.name[0] == 'q']
 
     def create_coords(self, dim, num):
-        coords = []
-        for i, j, k in product(('p', 'q'), dim, range(num)):
-            coords.append(sp.var('{}_{}_{}'.format(i,j,k)))
-        return tuple(coords)
+        ps = []
+        for i, j in product(dim, range(num)):
+            ps.append(sp.var('p_{}_{}'.format(i,j)))
+        qs = []
+        for i, j in product(dim, range(num)):
+            qs.append(sp.var('q_{}_{}'.format(i,j)))
+        return tuple(ps), tuple(qs )
 
     def create_initial_condition(self):
         """
         create initial condition vector from input file and ps and qs
         consistant with the RHS definition
         """
-        return [self.initial_condition[i.name] for i in self.ps+self.qs]
+        return [self.initial_condition[i.name] for i in self.coords]
 
     def prop(self, time, rtol=1.0e-6):
         H = sp.Matrix([self.H])
         RHS = sp.Matrix(sp.BlockMatrix([[H.jacobian(self.qs), H.jacobian(self.ps)]]))
         t = sp.var('t')
-        func = reduce_output(sp.lambdify((t,(self.ps+self.qs)), RHS), 0)
-        H_func = sp.lambdify((t,(self.ps+self.qs)), self.H)
+        func = reduce_output(sp.lambdify((t,(self.coords)), RHS), 0)
+        H_func = sp.lambdify((t,(self.coords)), self.H)
         # func is defind as ps+qs therefore we must pass qs + ps - see hamilton equations
         initial_condition = self.create_initial_condition()
         inital_energy = H_func(0,initial_condition)
@@ -102,7 +104,7 @@ class Hamilton:
         print 'change in total energy {}%'.format(energy_conservation*100)
         import pdb
         pdb.set_trace()
-        print (self.ps+self.qs)
+        print (self.coords)
         traj = np.vstack((sol['t'],sol['y']))
         np.savetxt('traj.dat', traj.T)
 
