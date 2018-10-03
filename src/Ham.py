@@ -84,7 +84,7 @@ class Hamilton:
             #want to set rtol = nrg_tol*0.1
             inital_energy = nrg_func(0, y0)
             nrg_condition = rtol_func(nrg_func, inital_energy, nrgtol)
-            nrg_condition.terminal = True
+            nrg_condition.terminal = False
             events.append(nrg_condition)
         sol = solve_ivp(dydt_func, (0,time), y0, rtol=rtol, events=events)
         print sol
@@ -113,17 +113,3 @@ initial_condition = data['initial_condition']
 system_vars = data['system_vars']
 Ham = Hamilton(num, dim, T, V, **system_vars)
 Ham.prop(100, initial_condition, nrgtol=1.0e-3)
-# # define canonical ps and qs
-# data = load_yaml('input')
-# system_vars = data['system_vars']
-# system_def = data['system_def']
-# coords = create_coords(system_def['dim'], system_def['num'])
-# ps = [i for i in coords if i.name[0] == 'p']
-# qs = [i for i in coords if i.name[0] == 'q']
-# coord_dict = {i.name:i for i in coords}
-# #define system varibales in yaml file
-# # mass = sp.var('m_:{}'.format(num))
-# # C12 = {k.name:k for k in [sp.var('C12_{}_{}'.format(i,j)) for i,j in combinations(range(num), 2)]}
-# # C6 = {k.name:k for k in [sp.var('C6_{}_{}'.format(i,j)) for i,j in combinations(range(num), 2)]}
-# # system_vars = {'mass': mass, 'dim': dim, 'num': num, 'C12':C12, 'C6':C6}
-
