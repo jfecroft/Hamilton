@@ -79,31 +79,45 @@ class Hamilton:
         """
         return [self.initial_condition[i.name] for i in self.ps+self.qs]
 
-    def prop(self, time, rtol:1.0e-6):
+    def prop(self, time, rtol=1.0e-6):
         HJacp = sp.Matrix([self.H]).jacobian(self.ps)
         HJacq = -sp.Matrix([self.H]).jacobian(self.qs)
         RHS = sp.Matrix(sp.BlockMatrix([[HJacq, HJacp]]))
         t = sp.var('t')
         func = reduce_output(sp.lambdify((t,(self.ps+self.qs)), RHS), 0)
+        H_func = sp.lambdify((t,(self.ps+self.qs)), self.H)
         # func is defind as ps+qs therefore we must pass qs + ps - see hamilton equations
         initial_condition = self.create_initial_condition()
-        inital_energy = self.H.subs(self.initial_condition)
-        sol = solve_ivp(func, (0,time), initial_condition, rtol=rtol)
+        inital_energy = H_func(0,initial_condition)
+
+        # also implemet hyperradius version
+        nrg_condition = check_val(H_func, inital_energy, 1.0e-5)
+        nrg_condition.terminal = False
+        sol = solve_ivp(func, (0,time), initial_condition, rtol=rtol, events=[end_cond])
         final = sol['y'][:,-1]
-        final_energy = self.H.subs(dict(zip((self.ps+self.qs),final)))
+        final_energy = H_func(0, final)
         energy_conservation = (inital_energy-final_energy)/inital_energy
         print 'change in total energy {}%'.format(energy_conservation*100)
+        import pdb
+        pdb.set_trace()
         print (self.ps+self.qs)
         traj = np.vstack((sol['t'],sol['y']))
         np.savetxt('traj.dat', traj.T)
-        import pdb
-        pdb.set_trace()
 
 
+def check_val(func, val, rtol, *args, **kwargs):
+    """
+    simple function to reduce output from existing functions
+
+    if func returns an iterable - just return item
+    """
+    def inner_func(*args, **kwargs):
+        return abs(100*(func(*args, **kwargs) - val)/val) - rtol
+    return inner_func
 
 
 Ham = Hamilton(T, V, 'input')
-Ham.prop(10, 1.0e-9)
+Ham.prop(10, 1.0)
 # # define canonical ps and qs
 # data = load_yaml('input')
 # system_vars = data['system_vars']
