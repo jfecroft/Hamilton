@@ -5,11 +5,6 @@ from scipy.integrate import solve_ivp
 from generic import reduce_output, load_yaml
 import numpy as np
 
-dim = 2 # spatial dimension
-num = 3 # particle number
-n = dim*num
-pairs = int(comb(num, 2, exact=True))
-
 
 def lj(r2, C12, C6):
     """
@@ -84,7 +79,7 @@ class Hamilton:
             nrg_condition = rtol_func(nrg_func, inital_energy, nrgtol)
             nrg_condition.terminal = False
             events.append(nrg_condition)
-        sol = solve_ivp(dydt_func, (0,time), y0, rtol=rtol, events=events)
+        sol = solve_ivp(dydt_func, (0, time), y0, rtol=rtol, events=events)
         print sol
         final_y = sol['y'][:,-1]
         final_energy = nrg_func(0, final_y)
