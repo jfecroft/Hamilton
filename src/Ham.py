@@ -2,8 +2,7 @@ import sympy as sp
 from itertools import groupby, combinations, product
 from scipy.misc import comb
 from scipy.integrate import solve_ivp
-from yaml import load
-from generic import reduce_output
+from generic import reduce_output, load_yaml
 import numpy as np
 
 dim = 2 # spatial dimension
@@ -18,51 +17,39 @@ def lj(r2, C12, C6):
     """
     return C12/r2**6 - C6/r2**3
 
-def T(coords, system_def, system_vars):
+def T(coords, num, dim, **kwargs):
     """
     generic kinetic energy term
     """
     ke = 0
-    for particle in range(system_def['num']):
-        for dimension in system_def['dim']:
-            ke += coords['p_{}_{}'.format(dimension,particle)]**2/(2*system_vars['mass_{}'.format(particle)])
+    for particle in range(num):
+        for dimension in dim:
+            ke += coords['p_{}_{}'.format(dimension,particle)]**2/(2*kwargs['mass_{}'.format(particle)])
     return ke
 
-def V(coords, system_def, system_vars):
+def V(coords, num, dim, **kwargs):
     """
     pairwise potential energy term
     """
     pot = 0
-    for pair in combinations(range(system_def['num']), 2):
+    for pair in combinations(range(num), 2):
         # loop over pairs of particles
-        c6 = system_vars['C6_{}_{}'.format(pair[0], pair[1])]
-        c12 = system_vars['C12_{}_{}'.format(pair[0], pair[1])]
-        r2 = sum([(coords['q_{}_{}'.format(i, pair[0])]-coords['q_{}_{}'.format(i, pair[1])])**2 for i in system_def['dim']])
+        c6 = kwargs['C6_{}_{}'.format(pair[0], pair[1])]
+        c12 = kwargs['C12_{}_{}'.format(pair[0], pair[1])]
+        r2 = sum([(coords['q_{}_{}'.format(i, pair[0])]-coords['q_{}_{}'.format(i, pair[1])])**2 for i in dim])
         pot += lj(r2,c12,c6)
     return pot
 
-def load_yaml(filen):
-    """
-    load a yaml file and return the json object
-    """
-    with open('{}.yml'.format(filen), 'r') as open_file:
-        return_dict = load(open_file)
-    return return_dict
-
 
 class Hamilton:
-    def __init__(self, T, V, input_file):
-        self.data = load_yaml('input')
-        self.system_def = self.data['system_def']
-        self.dim = self.system_def['dim']
-        self.num = self.system_def['num']
-        self.system_vars = self.data['system_vars']
-        self.initial_condition = self.data['initial_condition']
+    def __init__(self, num, dim, T, V, **kwargs):
+        self.dim = dim
+        self.num = num
         self.ps, self.qs = self.create_coords(self.dim, self.num)
         self.coords = tuple(self.ps+self.qs)
         self.coord_dict = {i.name:i for i in self.coords}
-        self.T = T(self.coord_dict, self.system_def, self.system_vars)
-        self.V = V(self.coord_dict, self.system_def, self.system_vars)
+        self.T = T(self.coord_dict, num, dim, **kwargs)
+        self.V = V(self.coord_dict, num, dim, **kwargs)
         self.H = self.T + self.V
 
     def create_coords(self, dim, num):
@@ -74,30 +61,33 @@ class Hamilton:
             qs.append(sp.var('q_{}_{}'.format(i,j)))
         return tuple(ps), tuple(qs )
 
-    def create_initial_condition(self):
+    def create_initial_condition(self, initial_condition):
         """
         create initial condition vector from input file and ps and qs
         consistant with the RHS definition
         """
-        return [self.initial_condition[i.name] for i in self.coords]
+        return [initial_condition[i.name] for i in self.coords]
 
-    def prop(self, time, rtol=1.0e-6):
+    def prop(self, time, y0, rtol=1.0e-6):
         H = sp.Matrix([self.H])
         RHS = sp.Matrix(sp.BlockMatrix([[H.jacobian(self.qs), H.jacobian(self.ps)]]))
         t = sp.var('t')
-        func = reduce_output(sp.lambdify((t,(self.coords)), RHS), 0)
-        H_func = sp.lambdify((t,(self.coords)), self.H)
-        # func is defind as ps+qs therefore we must pass qs + ps - see hamilton equations
-        initial_condition = self.create_initial_condition()
-        inital_energy = H_func(0,initial_condition)
+        dydt_func = reduce_output(sp.lambdify((t,(self.coords)), RHS), 0)
+        initial_condition = dict(zip([i.name for i in self.coords], y0))
+        print initial_condition
+        H_func = sp.lambdify((t,(self.coords)), self.H, initial_condition)
 
+        # create some events
+        # y0 = self.create_initial_condition(initial_condition)
         events = []
-        # also implemet hyperradius version
         #want to set rtol = nrg_tol*0.1
+        inital_energy = H_func(0, y0)
         nrg_condition = rtol_func(H_func, inital_energy, 1.0e-5)
         nrg_condition.terminal = False
         events.append(nrg_condition)
-        sol = solve_ivp(func, (0,time), initial_condition, rtol=rtol, events=events)
+        import pdb
+        pdb.set_trace()
+        sol = solve_ivp(dydt_func, (0,time), y0, rtol=rtol, events=events)
         final = sol['y'][:,-1]
         final_energy = H_func(0, final)
         energy_conservation = (inital_energy-final_energy)/inital_energy
@@ -119,8 +109,15 @@ def rtol_func(func, val, rtol, *args, **kwargs):
     return inner_func
 
 
-Ham = Hamilton(T, V, 'input')
-Ham.prop(10, 1.0e-6)
+data = load_yaml('input')
+num = data['system_def']['num']
+dim = data['system_def']['dim']
+initial_condition = data['initial_condition']
+print initial_condition
+initial_condition = tuple(initial_condition.itervalues())
+system_vars = data['system_vars']
+Ham = Hamilton(num, dim, T, V, **system_vars)
+Ham.prop(10, initial_condition, 1.0e-6)
 # # define canonical ps and qs
 # data = load_yaml('input')
 # system_vars = data['system_vars']
