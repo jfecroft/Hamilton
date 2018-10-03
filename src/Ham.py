@@ -68,8 +68,8 @@ class Hamilton:
 
     def create_coords(self, dim, num):
         coords = []
-        for i, j, k in product(dim, range(num), ('p', 'q')):
-            coords.append(sp.var('{}_{}_{}'.format(k,i,j)))
+        for i, j, k in product(('p', 'q'), dim, range(num)):
+            coords.append(sp.var('{}_{}_{}'.format(i,j,k)))
         return tuple(coords)
 
     def create_initial_condition(self):
@@ -80,9 +80,8 @@ class Hamilton:
         return [self.initial_condition[i.name] for i in self.ps+self.qs]
 
     def prop(self, time, rtol=1.0e-6):
-        HJacp = sp.Matrix([self.H]).jacobian(self.ps)
-        HJacq = -sp.Matrix([self.H]).jacobian(self.qs)
-        RHS = sp.Matrix(sp.BlockMatrix([[HJacq, HJacp]]))
+        H = sp.Matrix([self.H])
+        RHS = sp.Matrix(sp.BlockMatrix([[H.jacobian(self.qs), H.jacobian(self.ps)]]))
         t = sp.var('t')
         func = reduce_output(sp.lambdify((t,(self.ps+self.qs)), RHS), 0)
         H_func = sp.lambdify((t,(self.ps+self.qs)), self.H)
@@ -93,7 +92,7 @@ class Hamilton:
         events = []
         # also implemet hyperradius version
         #want to set rtol = nrg_tol*0.1
-        nrg_condition = check_val(H_func, inital_energy, 1.0e-5)
+        nrg_condition = rtol_func(H_func, inital_energy, 1.0e-5)
         nrg_condition.terminal = False
         events.append(nrg_condition)
         sol = solve_ivp(func, (0,time), initial_condition, rtol=rtol, events=events)
@@ -108,11 +107,10 @@ class Hamilton:
         np.savetxt('traj.dat', traj.T)
 
 
-def check_val(func, val, rtol, *args, **kwargs):
+def rtol_func(func, val, rtol, *args, **kwargs):
     """
-    simple function to reduce output from existing functions
-
-    if func returns an iterable - just return item
+    simple function - given a function which returns a value
+    return a function which return the fractional change
     """
     def inner_func(*args, **kwargs):
         return abs(100*(func(*args, **kwargs) - val)/val) - rtol
