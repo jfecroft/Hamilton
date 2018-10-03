@@ -47,8 +47,8 @@ class Hamilton:
         self.num = num
         self.ps, self.qs = self.create_coords(self.dim, self.num)
         self.coords = tuple(self.ps+self.qs)
-        self.coord_dict = {i.name:i for i in self.coords}
-        self.H = T(self.coord_dict, num, dim, **kwargs) + V(self.coord_dict, num, dim, **kwargs)
+        coord_dict = {i.name:i for i in self.coords}
+        self.H = T(coord_dict, num, dim, **kwargs) + V(coord_dict, num, dim, **kwargs)
 
     def create_coords(self, dim, num):
         ps = []
