@@ -61,39 +61,36 @@ class Hamilton:
             qs.append(sp.var('q_{}_{}'.format(i,j)))
         return tuple(ps), tuple(qs )
 
-    def create_initial_condition(self, initial_condition):
+    def create_initial_condition(self, initial_condition, default=0):
         """
         create initial condition vector from input file and ps and qs
         consistant with the RHS definition
-        """
-        return [initial_condition[i.name] for i in self.coords]
 
-    def prop(self, time, y0, rtol=1.0e-6):
+
+        if not in dict use default - avoids lots of zeros in intial conditions
+        """
+        return [initial_condition.get(i.name, default) for i in self.coords]
+
+    def prop(self, time, initial_condition, rtol=1.0e-6):
         H = sp.Matrix([self.H])
         RHS = sp.Matrix(sp.BlockMatrix([[H.jacobian(self.qs), H.jacobian(self.ps)]]))
         t = sp.var('t')
         dydt_func = reduce_output(sp.lambdify((t,(self.coords)), RHS), 0)
-        initial_condition = dict(zip([i.name for i in self.coords], y0))
-        print initial_condition
-        H_func = sp.lambdify((t,(self.coords)), self.H, initial_condition)
+        nrg_func = sp.lambdify((t,(self.coords)), self.H, initial_condition)
 
         # create some events
-        # y0 = self.create_initial_condition(initial_condition)
+        y0 = self.create_initial_condition(initial_condition)
         events = []
         #want to set rtol = nrg_tol*0.1
-        inital_energy = H_func(0, y0)
-        nrg_condition = rtol_func(H_func, inital_energy, 1.0e-5)
+        inital_energy = nrg_func(0, y0)
+        nrg_condition = rtol_func(nrg_func, inital_energy, 1.0e-5)
         nrg_condition.terminal = False
         events.append(nrg_condition)
-        import pdb
-        pdb.set_trace()
         sol = solve_ivp(dydt_func, (0,time), y0, rtol=rtol, events=events)
         final = sol['y'][:,-1]
-        final_energy = H_func(0, final)
+        final_energy = nrg_func(0, final)
         energy_conservation = (inital_energy-final_energy)/inital_energy
         print 'change in total energy {}%'.format(energy_conservation*100)
-        import pdb
-        pdb.set_trace()
         print (self.coords)
         traj = np.vstack((sol['t'],sol['y']))
         np.savetxt('traj.dat', traj.T)
@@ -113,8 +110,6 @@ data = load_yaml('input')
 num = data['system_def']['num']
 dim = data['system_def']['dim']
 initial_condition = data['initial_condition']
-print initial_condition
-initial_condition = tuple(initial_condition.itervalues())
 system_vars = data['system_vars']
 Ham = Hamilton(num, dim, T, V, **system_vars)
 Ham.prop(10, initial_condition, 1.0e-6)
