@@ -20,7 +20,8 @@ def T(coords, num, dim, **kwargs):
     ke = 0
     for particle in range(num):
         for dimension in dim:
-            ke += coords['p_{}_{}'.format(dimension,particle)]**2/(2*kwargs['mass_{}'.format(particle)])
+            ke += coords['p_{}_{}'.format(dimension, particle)]**2/(
+                2*kwargs['mass_{}'.format(particle)])
     return ke
 
 
@@ -33,7 +34,8 @@ def V(coords, num, dim, **kwargs):
         # loop over pairs of particles
         c6 = kwargs['C6_{}_{}'.format(pair[0], pair[1])]
         c12 = kwargs['C12_{}_{}'.format(pair[0], pair[1])]
-        r2 = sum([(coords['q_{}_{}'.format(i, pair[0])]-coords['q_{}_{}'.format(i, pair[1])])**2 for i in dim])
+        r2 = sum([(coords['q_{}_{}'.format(i, pair[0])] -
+                   coords['q_{}_{}'.format(i, pair[1])])**2 for i in dim])
         pot += lj(r2, c12, c6)
     return pot
 
