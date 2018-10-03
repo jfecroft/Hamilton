@@ -1,11 +1,11 @@
 system_def:
     dim:
-       ['x', 'y'] 
+       ['x'] 
     num:
         2
 system_vars:
     C12_0_1:
-        0.001
+        0.0001
     C12_0_2:
         0.001
     C12_1_2:
@@ -30,7 +30,7 @@ initial_condition:
     p_x_1:
         0
     p_y_1:
-        10
+        0
     q_x_0:
         -1
     q_y_0:
