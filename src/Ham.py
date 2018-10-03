@@ -92,6 +92,7 @@ class Hamilton:
 
         events = []
         # also implemet hyperradius version
+        #want to set rtol = nrg_tol*0.1
         nrg_condition = check_val(H_func, inital_energy, 1.0e-5)
         nrg_condition.terminal = False
         events.append(nrg_condition)
@@ -119,7 +120,7 @@ def check_val(func, val, rtol, *args, **kwargs):
 
 
 Ham = Hamilton(T, V, 'input')
-Ham.prop(10, 1.0)
+Ham.prop(10, 1.0e-6)
 # # define canonical ps and qs
 # data = load_yaml('input')
 # system_vars = data['system_vars']
