@@ -75,7 +75,9 @@ class Hamilton:
         H = sp.Matrix([self.H])
         RHS = sp.Matrix(sp.BlockMatrix([[H.jacobian(self.qs), H.jacobian(self.ps)]]))
         t = sp.var('t')
-        dydt_func = reduce_output(sp.lambdify((t,(self.coords)), RHS), 0)
+        H = sp.Matrix([self.H])
+        dydt = sp.Matrix(sp.BlockMatrix([[-H.jacobian(self.qs), H.jacobian(self.ps)]]))
+        dydt_func = reduce_output(sp.lambdify((t,(self.coords)), dydt), 0)
         nrg_func = sp.lambdify((t,(self.coords)), self.H, initial_condition)
 
         # create some events
