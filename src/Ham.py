@@ -90,10 +90,12 @@ class Hamilton:
         initial_condition = self.create_initial_condition()
         inital_energy = H_func(0,initial_condition)
 
+        events = []
         # also implemet hyperradius version
         nrg_condition = check_val(H_func, inital_energy, 1.0e-5)
         nrg_condition.terminal = False
-        sol = solve_ivp(func, (0,time), initial_condition, rtol=rtol, events=[end_cond])
+        events.append(nrg_condition)
+        sol = solve_ivp(func, (0,time), initial_condition, rtol=rtol, events=events)
         final = sol['y'][:,-1]
         final_energy = H_func(0, final)
         energy_conservation = (inital_energy-final_energy)/inital_energy

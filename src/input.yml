@@ -2,7 +2,7 @@ system_def:
     dim:
        ['x', 'y'] 
     num:
-        3
+        2
 system_vars:
     C12_0_1:
         0.001
