@@ -84,17 +84,14 @@ class Hamilton:
             #want to set rtol = nrg_tol*0.1
             inital_energy = nrg_func(0, y0)
             nrg_condition = rtol_func(nrg_func, inital_energy, nrgtol)
-            nrg_condition.terminal = False
+            nrg_condition.terminal = True
             events.append(nrg_condition)
-            rtol = nrgtol*0.001
-        print rtol
         sol = solve_ivp(dydt_func, (0,time), y0, rtol=rtol, events=events)
         print sol
         final_y = sol['y'][:,-1]
         final_energy = nrg_func(0, final_y)
         energy_conservation = (inital_energy-final_energy)/inital_energy
         print 'change in total energy {}%'.format(energy_conservation*100)
-        print (self.coords)
         traj = np.vstack((sol['t'],sol['y']))
         np.savetxt('traj.dat', traj.T)
 
