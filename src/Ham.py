@@ -1,3 +1,8 @@
+"""
+Generic hamiltonian propagator - as general as possible
+NO units or system dependant stuff here
+"""
+
 import sympy as sp
 from itertools import groupby, combinations, product
 from scipy.misc import comb
