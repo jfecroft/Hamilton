@@ -70,6 +70,14 @@ class Hamilton:
         return [initial_condition.get(i.name, default) for i in self.coords]
 
     def prop(self, time, initial_condition, nrgtol=1.0e-3, rtol=1.0e-4):
+        """
+        propagate the solution as a function of time
+        Variables:
+            time - tmax
+            initial_condition - dictionary of coord:vals
+            nrg_tol - desired energy tolerance
+            rtol - relative tolerance passed to solve_ivp - recommeded to be 0.1*nrgtol
+        """
         t = sp.var('t')
         H = sp.Matrix([self.H])
         dydt = sp.Matrix(sp.BlockMatrix([[-H.jacobian(self.qs),
