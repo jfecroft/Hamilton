@@ -69,7 +69,7 @@ class Hamilton:
         """
         return [initial_condition.get(i.name, default) for i in self.coords]
 
-    def prop(self, time, initial_condition, nrgtol=1.0e-3, rtol=1.0e-6):
+    def prop(self, time, initial_condition, nrgtol=1.0e-3, rtol=1.0e-4):
         t = sp.var('t')
         H = sp.Matrix([self.H])
         dydt = sp.Matrix(sp.BlockMatrix([[-H.jacobian(self.qs),
@@ -84,13 +84,13 @@ class Hamilton:
             # want to set rtol = nrg_tol*0.1
             inital_energy = nrg_func(0, y0)
             nrg_condition = rtol_func(nrg_func, inital_energy, nrgtol)
-            nrg_condition.terminal = False
+            nrg_condition.terminal = True
             events.append(nrg_condition)
         sol = solve_ivp(dydt_func, (0, time), y0, rtol=rtol, events=events)
         final_y = sol['y'][:, -1]
         final_energy = nrg_func(0, final_y)
         energy_conservation = (inital_energy-final_energy)/inital_energy
-        sol.energy_conservation = energy_conservation*100
+        sol.energy_conservation = energy_conservation
         traj = np.vstack((sol['t'], sol['y']))
         np.savetxt('traj.dat', traj.T)
         return sol
@@ -102,5 +102,5 @@ def rtol_func(func, val, rtol, *args, **kwargs):
     return a function which return the fractional change
     """
     def inner_func(*args, **kwargs):
-        return abs(100*(func(*args, **kwargs) - val)/val) - rtol
+        return abs((func(*args, **kwargs) - val)/val) - rtol
     return inner_func
