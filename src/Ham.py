@@ -4,6 +4,7 @@ from scipy.misc import comb
 from scipy.integrate import solve_ivp
 from generic import reduce_output, load_yaml
 import numpy as np
+from pprint import pprint
 
 
 def lj(r2, C12, C6):
@@ -86,13 +87,13 @@ class Hamilton:
             nrg_condition.terminal = False
             events.append(nrg_condition)
         sol = solve_ivp(dydt_func, (0, time), y0, rtol=rtol, events=events)
-        print sol
         final_y = sol['y'][:, -1]
         final_energy = nrg_func(0, final_y)
         energy_conservation = (inital_energy-final_energy)/inital_energy
-        print 'change in total energy {}%'.format(energy_conservation*100)
+        sol.energy_conservation = energy_conservation*100
         traj = np.vstack((sol['t'], sol['y']))
         np.savetxt('traj.dat', traj.T)
+        return sol
 
 
 def rtol_func(func, val, rtol, *args, **kwargs):
@@ -103,12 +104,3 @@ def rtol_func(func, val, rtol, *args, **kwargs):
     def inner_func(*args, **kwargs):
         return abs(100*(func(*args, **kwargs) - val)/val) - rtol
     return inner_func
-
-
-data = load_yaml('input')
-num = data['system_def']['num']
-dim = data['system_def']['dim']
-initial_condition = data['initial_condition']
-system_vars = data['system_vars']
-Ham = Hamilton(num, dim, T, V, **system_vars)
-Ham.prop(1000, initial_condition, rtol=1.0e-9, nrgtol=1.0e-3)
