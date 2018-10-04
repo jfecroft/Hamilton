@@ -77,7 +77,7 @@ class Hamilton:
         """
         return [initial_condition.get(i.name, default) for i in self.coords]
 
-    def prop(self, time, initial_condition, nrgtol=1.0e-3, rtol=1.0e-4):
+    def prop(self, time, initial_condition, nrgtol=1.0e-3, rtol=1.0e-5):
         """
         propagate the solution as a function of time
         Variables:
@@ -94,14 +94,16 @@ class Hamilton:
         dydt_func = reduce_output(sp.lambdify((t, (self.coords)), dydt), 0)
         nrg_func = sp.lambdify((t, (self.coords)), self.H, initial_condition)
         y0 = self.create_initial_condition(initial_condition)
+        inital_energy = nrg_func(0, y0)
+        print 'inital_energy', inital_energy
+        print self.coords
 
         # create some events
         events = []
         if nrgtol:
             # want to set rtol = nrg_tol*0.1
-            inital_energy = nrg_func(0, y0)
             nrg_condition = rtol_func(nrg_func, inital_energy, nrgtol)
-            nrg_condition.terminal = True
+            nrg_condition.terminal = False
             events.append(nrg_condition)
         sol = solve_ivp(dydt_func, (0, time), y0, rtol=rtol, events=events)
         final_y = sol['y'][:, -1]
