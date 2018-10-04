@@ -43,6 +43,9 @@ def V(coords, num, dim, **kwargs):
 
 class Hamilton:
     def __init__(self, num, dim, T, V, **kwargs):
+        """
+        initialise the hamiltonian and the canonical coordiantes
+        """
         self.dim = dim
         self.num = num
         self.ps, self.qs = self.create_coords(self.dim, self.num)
@@ -76,7 +79,8 @@ class Hamilton:
             time - tmax
             initial_condition - dictionary of coord:vals
             nrg_tol - desired energy tolerance
-            rtol - relative tolerance passed to solve_ivp - recommeded to be 0.1*nrgtol
+            rtol - relative tolerance passed to solve_ivp -
+                   recommeded to be 0.1*nrgtol
         """
         t = sp.var('t')
         H = sp.Matrix([self.H])
