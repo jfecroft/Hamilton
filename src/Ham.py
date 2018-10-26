@@ -13,10 +13,10 @@ from pprint import pprint
 
 
 def lj(r2, C12, C6):
-     """
-     lennard jones potential r2 is r**2
-     """
-     return C12/r2**6 - C6/r2**3
+    """
+    lennard jones potential r2 is r**2
+    """
+    return C12/r2**6 - C6/r2**3
 
 
 def T(coords, num, dim, **kwargs):
